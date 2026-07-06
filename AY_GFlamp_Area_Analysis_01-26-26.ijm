@@ -5,10 +5,13 @@ roiManager("reset");
 baseline_start = 1;
 baseline_end = 10;
 nStdevs = 3;
-size_thresh = 0.03;
+size_thresh = 0.05;
+abs_thresh = 0.5;
 
 going = "pos";
 
+getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec);
+date = "" + year + "-" + month+1 + "-" + dayOfMonth;
 open_windows = getList("image.titles");
 mask_windows = newArray(); dFF_windows_all = newArray();
 for (i=0; i<open_windows.length; i+=1) {
@@ -30,13 +33,14 @@ if (dFF_windows_all.length != 0) {
 	dFF_windows_all = Array.concat(dFF_windows_all, "Exclude");
 }
 
-
+thresh_modes = newArray("Absolute", "nStdDevs");
 dFF_windows = newArray();
 Dialog.create("GFlamp Hotspot Analysis");
 Dialog.addChoice("Dendrite mask:", mask_windows, mask_windows[0]);
 for (i=0; i<dFF_windows_all.length - 1; i+=1) {
 	Dialog.addChoice("Analyze dFoverF:", dFF_windows_all, dFF_windows_all[i]);
 }
+Dialog.addChoice("Threshold Mode:", thresh_modes, thresh_modes[1]);
 Dialog.addCheckbox("Save data", true);
 Dialog.show();
 
@@ -45,7 +49,19 @@ for (i=0; i<dFF_windows_all.length - 1; i+=1) {
 	dFF_windows = Array.concat(dFF_windows, Dialog.getChoice());
 }
 //Array.print(dFF_windows);
+thresh_mode = Dialog.getChoice();
 save_opt = Dialog.getCheckbox();
+
+if (save_opt == true) {
+	save_dir = getDir("Select Save Directory");
+}
+
+if (thresh_mode == "Absolute") {
+	Dialog.create("Absolute Threshold");
+	Dialog.addNumber("Threshold:", abs_thresh);
+	Dialog.show();
+	thresh = Dialog.getNumber();
+}
 
 selectWindow(mask_window); //converts mask window to binary
 run("Select None");
@@ -92,6 +108,10 @@ for (i=0; i<dFF_windows.length; i+=1) {
 	pooled_stdev = sqrt(mean_vars);
 	print("Baseline StdDev:\t" + pooled_stdev);
 	
+	if (thresh_mode == "nStdDevs") {
+		thresh = nStdevs * pooled_stdev;
+	}
+	
 	imageCalculator("Multiply create 32-bit stack", dFF_windows[i], mask_window);
 	setMinAndMax(0, 5);
 	rename(replace(dFF_windows[i], ".tif", "") + "_Masked");
@@ -119,8 +139,8 @@ for (i=0; i<dFF_windows.length; i+=1) {
 	
 	selectWindow(active_window_masked);
 	setSlice(peak_frame);
-	setThreshold((nStdevs * pooled_stdev), 99);
-	print("Threshold:\t" + nStdevs * pooled_stdev);
+	setThreshold(thresh, 99);
+	print("Threshold:\t" + thresh);
 	print("Peak frame:\t" + peak_frame);
 	print("Dendrite area (um2):\t" + dend_area);	
 	run("Set Measurements...", "area mean min redirect=None decimal=4");
@@ -138,10 +158,11 @@ for (i=0; i<dFF_windows.length; i+=1) {
 			thresh_mins = Array.concat(thresh_mins, getResult("Min", j));
 			thresh_maxs = Array.concat(thresh_maxs, getResult("Max", j));
 		}
-		total_area = 0;
+		total_area = 0; area_mean = 0;
 		for (j=0; j<thresh_areas.length; j+=1) {
 			total_area = total_area + thresh_areas[j];
 		}
+		area_mean = total_area / thresh_areas.length;
 		hotspot_mean = 0;
 		for (j=0; j<thresh_means.length; j+=1) {
 			hotspot_mean = hotspot_mean + thresh_means[j];
@@ -158,8 +179,14 @@ for (i=0; i<dFF_windows.length; i+=1) {
 		print("Number of hotspots (n):\t" + thresh_areas.length);
 		print("Hotspot density (/um2):\t" + thresh_areas.length / dend_area);
 		print("Total area >" + nStdevs + "of baseline:\t" + total_area);
+		print("Average hotspot area (um2):\t" + area_mean);
 		print("Hotspot mean dF/F:\t" + hotspot_mean);
 		print("Hotspot max dF/F:\t" + hotspot_max);
+		
+		if (save_opt == true) {
+			selectWindow("Log");
+			saveAs("Text", save_dir + "/" + "GFlamp Analysis_" + date);
+		}
 	}
 	
 	selectWindow(active_window_masked);
