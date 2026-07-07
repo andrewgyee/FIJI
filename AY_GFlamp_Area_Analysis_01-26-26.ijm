@@ -1,4 +1,4 @@
-//AY edit 01-19-26
+//AY edit 07-07-26
 
 print("\\Clear");
 roiManager("reset");
@@ -54,6 +54,12 @@ save_opt = Dialog.getCheckbox();
 
 if (save_opt == true) {
 	save_dir = getDir("Select Save Directory");
+	if (indexOf(save_dir, "Output") == -1) {
+		save_dir = save_dir + "Output/";
+		if (!File.exists(save_dir)) {
+			File.makeDirectory(save_dir);
+		}
+	}
 }
 
 if (thresh_mode == "Absolute") {
@@ -185,7 +191,9 @@ for (i=0; i<dFF_windows.length; i+=1) {
 		
 		if (save_opt == true) {
 			selectWindow("Log");
-			saveAs("Text", save_dir + "/" + "GFlamp Analysis_" + date);
+			saveAs("Text", save_dir + "/" + "GFlamp_Analysis_" + replace(dFF_windows[i], ".tif", "") + "_01_Summary_" + date);
+			selectWindow("Results");
+			saveAs("Results", save_dir + "/" + "GFlamp_Analysis_" + replace(dFF_windows[i], ".tif", "") + "_02_Hotspots_" + date + ".csv");
 		}
 	}
 	
