@@ -1,3 +1,4 @@
+//AY edit 08-06-26
 //AY edit 07-07-26
 
 print("\\Clear");
@@ -87,10 +88,6 @@ info = substring(info, res_index, res_index + 17);
 scale_factor = replace(info, "Resolution: ", "");
 scale_factor = parseFloat(scale_factor);
 
-if (save_opt == true) {
-	
-}
-
 for (i=0; i<dFF_windows.length; i+=1) {
 	print(dFF_windows[i]);
 	selectWindow(dFF_windows[i]);
@@ -115,11 +112,12 @@ for (i=0; i<dFF_windows.length; i+=1) {
 	print("Baseline StdDev:\t" + pooled_stdev);
 	
 	if (thresh_mode == "nStdDevs") {
-		thresh = nStdevs * pooled_stdev;
+		thresh = nStdevs * pooled_stdev; //set threshold for segmentation
 	}
 	
 	imageCalculator("Multiply create 32-bit stack", dFF_windows[i], mask_window);
-	setMinAndMax(0, 5);
+	run("AY_BlueWhiteRed");
+	setMinAndMax(-2, 2);
 	rename(replace(dFF_windows[i], ".tif", "") + "_Masked");
 	active_window_masked = getTitle();
 	frame_vals = newArray();
@@ -198,6 +196,6 @@ for (i=0; i<dFF_windows.length; i+=1) {
 	}
 	
 	selectWindow(active_window_masked);
-	setMinAndMax(0,5);
+	setMinAndMax(-2, 2);
 }
 selectWindow("Log");
